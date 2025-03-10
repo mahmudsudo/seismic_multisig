@@ -1,43 +1,43 @@
 pragma solidity ^0.8.0;
 
-contract MultiSigWallet {
-    saddress[] public signers;
-    suint public threshold;
-    suint public nonce;
+contract Multisig {
+    address[] public signers;
+    uint public threshold;
+    uint public nonce;
 
     struct Transaction {
-        saddress to;
-        suint value;
+        address to;
+        uint value;
         bytes data;
-        sbool executed;
-        suint approvalCount;
+        bool executed;
+        uint approvalCount;
     }
 
-    mapping(suint => Transaction) public transactions;
-    mapping(suint => mapping(saddress => sbool)) public approvals;
+    mapping(uint => Transaction) public transactions;
+    mapping(uint => mapping(address => bool)) public approvals;
 
     event TransactionSubmitted(
-        suint indexed transactionId,
-        saddress indexed sender
+        uint indexed transactionId,
+        address indexed sender
     );
     event TransactionApproved(
-        suint indexed transactionId,
-        saddress indexed approver
+        uint indexed transactionId,
+        address indexed approver
     );
     event TransactionExecuted(
-        suint indexed transactionId,
-        saddress indexed executor
+        uint indexed transactionId,
+        address indexed executor
     );
 
-    constructor(saddress[] memory _signers, suint _threshold) {
+    constructor(address[] memory _signers, uint _threshold) {
         require(_threshold <= _signers.length, "Threshold too high");
         signers = _signers;
         threshold = _threshold;
     }
 
     modifier onlySigner() {
-        sbool isSigner = false;
-        for (suint i = 0; i < signers.length; i++) {
+        bool isSigner = false;
+        for (uint i = 0; i < signers.length; i++) {
             if (signers[i] == msg.sender) {
                 isSigner = true;
                 break;
@@ -52,10 +52,10 @@ contract MultiSigWallet {
         suint _value,
         bytes memory _data
     ) public onlySigner {
-        suint transactionId = nonce++;
+        uint transactionId = nonce++;
         transactions[transactionId] = Transaction({
-            to: _to,
-            value: _value,
+            to: address(_to),
+            value: uint(_value),
             data: _data,
             executed: false,
             approvalCount: 0
@@ -65,23 +65,23 @@ contract MultiSigWallet {
 
     function approveTransaction(suint _transactionId) public onlySigner {
         require(
-            !transactions[_transactionId].executed,
+            !transactions[uint(_transactionId)].executed,
             "Transaction already executed"
         );
-        require(!approvals[_transactionId][msg.sender], "Already approved");
+        require(!approvals[uint(_transactionId)][msg.sender], "Already approved");
 
-        approvals[_transactionId][msg.sender] = true;
-        transactions[_transactionId].approvalCount++;
+        approvals[uint(_transactionId)][msg.sender] = true;
+        transactions[uint(_transactionId)].approvalCount++;
 
-        emit TransactionApproved(_transactionId, msg.sender);
+        emit TransactionApproved(uint(_transactionId), msg.sender);
 
-        if (transactions[_transactionId].approvalCount >= threshold) {
+        if (transactions[uint(_transactionId)].approvalCount >= threshold) {
             executeTransaction(_transactionId);
         }
     }
 
     function executeTransaction(suint _transactionId) public onlySigner {
-        Transaction storage txn = transactions[_transactionId];
+        Transaction storage txn = transactions[uint(_transactionId)];
         require(!txn.executed, "Transaction already executed");
         require(txn.approvalCount >= threshold, "Not enough approvals");
 
@@ -89,6 +89,6 @@ contract MultiSigWallet {
         (bool success, ) = txn.to.call{value: txn.value}(txn.data);
         require(success, "Transaction failed");
 
-        emit TransactionExecuted(_transactionId, msg.sender);
+        emit TransactionExecuted(uint(_transactionId), msg.sender);
     }
 }
